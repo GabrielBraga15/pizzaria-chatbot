@@ -1,0 +1,40 @@
+# --- SEGURANÇA E CONFIGURAÇÕES LOCAIS ---
+# Bloqueia arquivos de variáveis de ambiente (onde está sua chave GCP)
+.env
+.env.local
+.env.*.local
+*.env
+
+# --- ARQUIVOS DE DEPENDÊNCIAS ---
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Python (caso use no chatbot)
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+env/
+
+# --- SISTEMA OPERACIONAL ---
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# --- IDEs E EDITORES ---
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp

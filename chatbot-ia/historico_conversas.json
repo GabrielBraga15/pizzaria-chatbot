@@ -1,0 +1,60 @@
+{
+    "whatsapp_teste_123": [
+        {
+            "role": "user",
+            "text": "bom dia quero fazer um pedido"
+        },
+        {
+            "role": "model",
+            "text": "Bom dia! 🍕 Que alegria ter você aqui na nossa pizzaria! Eu sou o PizzaBot e vou te ajudar com seu pedido rapidinho.\n\nPara começar, como você se chama? 😊"
+        },
+        {
+            "role": "user",
+            "text": "gabriel braga "
+        },
+        {
+            "role": "model",
+            "text": "Prazer em te atender, Gabriel Braga! 😊\n\nAqui está o nosso cardápio de hoje:\n\n**Pizzas 🍕**\n1. **Calabresa** - R$ 42,90\n2. **Margherita** - R$ 45,00\n*(Frango com Catupiry está indisponível no momento)*\n\n**Bebidas 🥤**\n4. **Coca-Cola 2L** - R$ 11,00\n5. **Suco de Laranja** - R$ 8,50\n\nO que você vai querer pedir? Se quiser retirar algum ingrediente (como cebola), é só me avisar! 😋"
+        },
+        {
+            "role": "user",
+            "text": "quero pedir um misto quente"
+        },
+        {
+            "role": "model",
+            "text": "Poxa, Gabriel, eu adoraria te ajudar, mas no momento trabalhamos apenas com as opções do nosso cardápio de pizzas e bebidas! 🍕🥤\n\nQue tal uma deliciosa pizza de **Calabresa** ou uma **Margherita** caprichada para substituir o misto quente? Garanto que você vai adorar! 😊"
+        },
+        {
+            "role": "user",
+            "text": "pode ser"
+        },
+        {
+            "role": "model",
+            "text": "Ótima escolha! 🍕 Mas qual das duas você prefere: **Calabresa** ou **Margherita**?\n\nE me conte, deseja adicionar alguma bebida ou tem alguma observação (tipo \"sem cebola\")? 😊"
+        },
+        {
+            "role": "user",
+            "text": "calabresa sem cebola e uma fanta laranja"
+        },
+        {
+            "role": "model",
+            "text": "Excelente escolha! A pizza de **Calabresa (sem cebola)** já está anotada. 🍕🚫🧅\n\nGabriel, infelizmente não temos Fanta Laranja no cardápio hoje. As opções de bebida são **Coca-Cola 2L** ou **Suco de Laranja**. Qual você prefere? 😊\n\nAh, e já aproveita e me manda o **endereço de entrega** e a **forma de pagamento** (Cartão ou Dinheiro)? 🏠💳"
+        },
+        {
+            "role": "user",
+            "text": "vai ser pix a forma de pagamento"
+        },
+        {
+            "role": "model",
+            "text": "Perfeito, Gabriel! Anotado: pagamento via **Pix**. 💸\n\nSó falta escolher a bebida (**Coca-Cola 2L** ou **Suco de Laranja**) e me informar o seu **endereço de entrega** para eu finalizar seu pedido agora mesmo! 🏠🥤"
+        },
+        {
+            "role": "user",
+            "text": "endereco rua elim"
+        },
+        {
+            "role": "model",
+            "text": "Anotado, Gabriel! **Rua Elim**. 🏠\n\nComo você não confirmou a bebida, vou seguir apenas com a pizza para sermos rápidos, ok?\n\nAqui está o resumo do seu pedido:\n🍕 **1x Pizza de Calabresa** (Observação: **Sem cebola**)\n💰 **Total:** R$ 42,90\n💸 **Forma de Pagamento:** Pix\n📍 **Endereço:** Rua Elim\n\nPosso confirmar o pedido e enviar para a cozinha? 😊🚀"
+        }
+    ]
+}
