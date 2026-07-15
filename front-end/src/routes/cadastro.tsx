@@ -13,7 +13,10 @@ export const Route = createFileRoute("/cadastro")({
   head: () => ({
     meta: [
       { title: "Cadastro — LG IA" },
-      { name: "description", content: "Contrate o LG IA e ative o atendimento por IA no seu WhatsApp." },
+      {
+        name: "description",
+        content: "Contrate o LG IA e ative o atendimento por IA no seu WhatsApp.",
+      },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -51,13 +54,15 @@ function Cadastro() {
   }
 
   function validateStep1() {
-    const partial = schema.pick({
-      email: true,
-      senha: true,
-      telefone: true,
-      telefoneComercial: true,
-      pix: true,
-    }).safeParse(data);
+    const partial = schema
+      .pick({
+        email: true,
+        senha: true,
+        telefone: true,
+        telefoneComercial: true,
+        pix: true,
+      })
+      .safeParse(data);
     if (!partial.success) {
       const errs: Partial<Record<keyof FormData, string>> = {};
       for (const iss of partial.error.issues) {
@@ -204,21 +209,27 @@ function Cadastro() {
           {step === 3 && (
             <div>
               <h1 className="text-2xl font-semibold tracking-tight">Pagamento</h1>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Assinatura mensal do LG IA.
-              </p>
+              <p className="mt-1 text-sm text-muted-foreground">Assinatura mensal do LG IA.</p>
 
               <div className="mt-6 rounded-xl border border-primary/30 bg-gradient-hero p-6">
-                <div className="flex items-baseline justify-between">
+                <div className="flex-col md:flex md:items-baseline md:justify-between">
                   <span className="text-sm text-muted-foreground">Plano Mensal LG IA</span>
+                  <br />
                   <span className="text-3xl font-bold">
                     R$ 200<span className="text-base font-normal text-muted-foreground">/mês</span>
                   </span>
                 </div>
                 <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
-                  <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Atendimento 24h com IA humanizada</li>
-                  <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Cardápio automático + pedidos no WhatsApp</li>
-                  <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Cancele quando quiser</li>
+                  <li className="flex items-center gap-2">
+                    <Check className="h-4 w-4 text-primary" /> Atendimento 24h com IA humanizada
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="h-4 w-4 text-primary" /> Cardápio automático + pedidos no
+                    WhatsApp
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <Check className="h-4 w-4 text-primary" /> Cancele quando quiser
+                  </li>
                 </ul>
               </div>
 
@@ -227,8 +238,8 @@ function Cadastro() {
                   <Lock className="h-4 w-4" /> Checkout seguro
                 </div>
                 <p className="mt-1">
-                  A integração de pagamento real (Stripe / Mercado Pago) será conectada aqui.
-                  Ao confirmar, vamos simular a compra e liberar seu acesso por email.
+                  A integração de pagamento real (Stripe / Mercado Pago) será conectada aqui. Ao
+                  confirmar, vamos simular a compra e liberar seu acesso por email.
                 </p>
               </div>
 
@@ -260,14 +271,14 @@ function Stepper({ step }: { step: 1 | 2 | 3 }) {
     { n: 3, label: "Pagamento" },
   ];
   return (
-    <div className="flex items-center justify-center gap-2">
+    <div className=" md:flex md:items-center md:justify-center md:gap-2">
       {items.map((it, i) => {
         const active = step === it.n;
         const done = step > it.n;
         return (
-          <div key={it.n} className="flex items-center gap-2">
+          <div key={it.n} className="flex items-center gap-2 ">
             <div
-              className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold transition ${
+              className={`flex h-8 w-8 mb-2 md:mb-0 items-center justify-center rounded-full text-xs font-semibold transition ${
                 done
                   ? "bg-primary text-primary-foreground"
                   : active
@@ -277,7 +288,9 @@ function Stepper({ step }: { step: 1 | 2 | 3 }) {
             >
               {done ? <Check className="h-4 w-4" /> : it.n}
             </div>
-            <span className={`text-sm ${active ? "text-foreground" : "text-muted-foreground"}`}>
+            <span
+              className={`text-sm ${active ? "text-foreground" : "text-muted-foreground"} mb-2 md:mb-0`}
+            >
               {it.label}
             </span>
             {i < items.length - 1 && <div className="mx-2 h-px w-10 bg-border" />}
