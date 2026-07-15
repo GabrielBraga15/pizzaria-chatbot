@@ -21,7 +21,7 @@ client = genai.Client()
 cardapio_atual = obter_cardapio()
 
 PROMPT_SISTEMA = f"""
-Você é o "PizzaBot", o atendente virtual super simpático e rápido da nossa pizzaria.
+Você é o "LG IA", o atendente virtual super simpático e rápido da nossa pizzaria.
 Seu objetivo é guiar o cliente no fluxo de forma natural e fechar o pedido em até 3 minutos.
 
 Regras Obrigatórias:
@@ -112,9 +112,7 @@ def enviar_mensagem_com_retry(cliente_id, mensagem_usuario, historico_usuario):
 
 
 # --- LOOP PRINCIPAL ---
-print(
-    "🤖 PizzaBot Iniciado com Persistência e Fallback! Digite 'sair' para encerrar.\n"
-)
+print("🤖 LG IA Iniciado com Persistência e Fallback! Digite 'sair' para encerrar.\n")
 
 # Para este exemplo de terminal, vamos usar um ID fixo de usuário (como se fosse o número do WhatsApp)
 CLIENTE_ID = "whatsapp_teste_123"
