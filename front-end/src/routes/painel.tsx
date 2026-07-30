@@ -86,7 +86,6 @@ export interface EmpresaUsuario {
   criadoEm: string;
 }
 
-// Utilitário para formatação de moeda em BRL
 const formatCurrency = (val: number) => {
   return new Intl.NumberFormat('pt-BR', {
     style: 'currency',
@@ -128,7 +127,7 @@ export function Painel() {
   const fetchUsuario = async () => {
     try {
       setLoadingUser(true);
-      const empresaId = localStorage.getItem('empresa_id') || '1'; 
+      const empresaId = localStorage.getItem('empresa_id') || '1';
 
       const data = await getUsuarioLogado({ data: empresaId });
 
@@ -148,10 +147,10 @@ export function Painel() {
   };
 
   // 2. Carrega Cardápio via Server Function
-  const fetchCardapio = async () => {
+  const fetchCardapio = async (empresaId: string) => {
     try {
       setLoadingCardapio(true);
-      const data = await getCardapio();
+      const data = await getCardapio({ data: empresaId });
       setCardapio(data as ItemCardapio[]);
     } catch {
       toast.error('Não foi possível carregar o cardápio do banco.');
@@ -160,6 +159,7 @@ export function Painel() {
     }
   };
 
+  // Efeito de autenticação e busca inicial do usuário
   useEffect(() => {
     const token = localStorage.getItem('auth_token');
     if (!token) {
@@ -168,8 +168,14 @@ export function Painel() {
     }
 
     fetchUsuario();
-    fetchCardapio();
   }, []);
+
+  // Efeito reativo: Busca o cardápio assim que o usuário estiver carregado
+  useEffect(() => {
+    if (usuario?.id) {
+      fetchCardapio(usuario.id);
+    }
+  }, [usuario?.id]);
 
   function handleLogout() {
     localStorage.removeItem('auth_token');
@@ -205,7 +211,7 @@ export function Painel() {
     }
   }
 
-  // Operações do Cardápio via Server Functions
+  // Operações do Cardápio
   function handleOpenAddModal() {
     setEditingItem(null);
     setFormItem({
@@ -230,52 +236,60 @@ export function Painel() {
     setModalOpen(true);
   }
 
-  async function handleSaveItem() {
-    if (!formItem.categoria.trim() || !formItem.item_nome.trim() || !formItem.preco) {
-      toast.error('Preencha categoria, nome e preço!');
-      return;
-    }
-
-    const priceNum = parseFloat(formItem.preco.replace(',', '.'));
-    if (isNaN(priceNum) || priceNum <= 0) {
-      toast.error('Preço inválido.');
-      return;
-    }
-
-    setSavingItem(true);
-    const payload = {
-      categoria: formItem.categoria.trim(),
-      item_nome: formItem.item_nome.trim(),
-      descricao: formItem.descricao.trim(),
-      preco: priceNum,
-      disponivel: formItem.disponivel,
-    };
-
-    try {
-      if (editingItem) {
-        const updated = await atualizarItemCardapio({
-          data: { id: editingItem.id, ...payload },
-        });
-
-        setCardapio((prev) =>
-          prev.map((it) => (it.id === editingItem.id ? (updated as ItemCardapio) : it)),
-        );
-        toast.success('Produto atualizado!');
-      } else {
-        const newItem = await criarItemCardapio({ data: payload });
-        setCardapio((prev) => [...prev, newItem as ItemCardapio]);
-        toast.success('Produto adicionado!');
-      }
-      setModalOpen(false);
-    } catch {
-      toast.error('Erro ao salvar no banco de dados.');
-    } finally {
-      setSavingItem(false);
-    }
+async function handleSaveItem() {
+  // 1. Trava se o usuário ainda não estiver carregado/autenticado
+  if (!usuario?.id) {
+    toast.error('Sessão inválida. Recarregue a página.');
+    return;
   }
 
+  if (!formItem.categoria.trim() || !formItem.item_nome.trim() || !formItem.preco) {
+    toast.error('Preencha categoria, nome e preço!');
+    return;
+  }
+
+  const priceNum = parseFloat(formItem.preco.replace(',', '.'));
+  if (isNaN(priceNum) || priceNum <= 0) {
+    toast.error('Preço inválido.');
+    return;
+  }
+
+  setSavingItem(true);
+
+  // Como já validamos usuario.id acima, o TS entende empresa_id estritamente como string
+  const payload = {
+    empresa_id: usuario.id,
+    categoria: formItem.categoria.trim(),
+    item_nome: formItem.item_nome.trim(),
+    descricao: formItem.descricao.trim(),
+    preco: priceNum,
+    disponivel: formItem.disponivel,
+  };
+
+  try {
+    if (editingItem) {
+      const updated = await atualizarItemCardapio({
+        data: { id: editingItem.id, ...payload },
+      });
+
+      setCardapio((prev) =>
+        prev.map((it) => (it.id === editingItem.id ? (updated as ItemCardapio) : it)),
+      );
+      toast.success('Produto atualizado!');
+    } else {
+      const newItem = await criarItemCardapio({ data: payload });
+      setCardapio((prev) => [...prev, newItem as ItemCardapio]);
+      toast.success('Produto adicionado!');
+    }
+    setModalOpen(false);
+  } catch {
+    toast.error('Erro ao salvar no banco de dados.');
+  } finally {
+    setSavingItem(false);
+  }
+}
+
   async function handleToggleDisponivel(id: string, currentStatus: boolean) {
-    // Optimistic UI update
     setCardapio((prev) =>
       prev.map((it) => (it.id === id ? { ...it, disponivel: !currentStatus } : it)),
     );
@@ -286,7 +300,6 @@ export function Painel() {
       });
       toast.success('Status atualizado.');
     } catch {
-      // Reverte em caso de erro
       setCardapio((prev) =>
         prev.map((it) => (it.id === id ? { ...it, disponivel: currentStatus } : it)),
       );
@@ -359,7 +372,7 @@ export function Painel() {
           </Button>
         </div>
 
-        {/* SECTION: GESTÃO DO CARDÁPIO */}
+        {/* GESTÃO DO CARDÁPIO */}
         <Card className="mt-8 border-border/60 bg-card/70 p-6">
           <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border/60 pb-4">
             <div className="flex items-center gap-3">
@@ -390,8 +403,7 @@ export function Painel() {
               </div>
             ) : cardapio.length === 0 ? (
               <div className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
-                Nenhum produto cadastrado no banco. Clique em "Adicionar Produto" para criar o
-                primeiro.
+                Nenhum produto cadastrado no banco. Clique em "Adicionar Produto" para criar o primeiro.
               </div>
             ) : (
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -459,7 +471,7 @@ export function Painel() {
           </div>
         </Card>
 
-        {/* MODAL / DIALOG DE CADASTRO E EDIÇÃO */}
+        {/* MODAL DIALOG */}
         <Dialog open={modalOpen} onOpenChange={setModalOpen}>
           <DialogContent className="sm:max-w-106.25">
             <DialogHeader>
@@ -626,7 +638,7 @@ export function Painel() {
             </div>
           </Card>
 
-          {/* Card Suporte */}
+          {/* CARD SUPORTE */}
           <Card className="border-border/60 bg-card/70 p-6">
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-brand shadow-glow">
               <LifeBuoy className="h-5 w-5 text-brand-foreground" />
@@ -649,7 +661,7 @@ export function Painel() {
           </Card>
         </div>
 
-        {/* Dados Cadastrados no Banco */}
+        {/* DADOS DA CONTA */}
         <Card className="mt-6 border-border/60 bg-card/70 p-6">
           <h2 className="text-lg font-semibold">Dados da conta (do Banco)</h2>
           <dl className="mt-4 grid gap-4 sm:grid-cols-2">
