@@ -35,9 +35,9 @@ function Header() {
     <header className="sticky top-0 z-40 border-b border-border/60 bg-background/70 backdrop-blur-lg">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
         <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-brand shadow-glow">
-            <Bot className="h-5 w-5 text-brand-foreground" />
-          </div>
+             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-transparent shadow-glow">
+              <img src="/icon.png" alt="LG IA" className="h-full w-full object-contain" />
+            </div>
           <span className="text-lg font-semibold tracking-tight">LG IA</span>
         </div>
         <nav className="hidden items-center gap-8 md:flex">
@@ -103,8 +103,10 @@ function ChatMockup() {
   return (
     <Card className="overflow-hidden border-border/60 bg-card/80 p-0 shadow-card backdrop-blur">
       <div className="flex items-center gap-3 border-b border-border/60 bg-secondary/40 px-4 py-3">
-        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-brand">
-          <Bot className="h-4 w-4 text-brand-foreground" />
+        <div className="flex h-8 w-8 items-center justify-center rounded-full ">
+                     
+              <img src="/icon.png" alt="LG IA" className="h-full w-full object-contain" />
+            
         </div>
         <div>
           <div className="text-sm font-medium">LG IA · Sua Pizzaria</div>
@@ -280,8 +282,8 @@ function Footer() {
     <footer className="border-t border-border/60 py-10">
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 md:flex-row">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <div className="flex h-6 w-6 items-center justify-center rounded bg-gradient-brand">
-            <Bot className="h-3.5 w-3.5 text-brand-foreground" />
+          <div className="flex h-6 w-6 items-center justify-center rounded ">
+            <img src="/icon.png" alt="LG IA" className="h-full w-full object-contain" />
           </div>
           LG IA © {new Date().getFullYear()}
         </div>

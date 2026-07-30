@@ -60,9 +60,9 @@ function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-background bg-gradient-hero px-6 py-16 text-foreground">
       <Card className="w-full max-w-md border-border/60 bg-card/80 p-8 shadow-card">
         <Link to="/" className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-brand shadow-glow">
-            <Bot className="h-5 w-5 text-brand-foreground" />
-          </div>
+             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-transparent shadow-glow">
+              <img src="/icon.png" alt="LG IA" className="h-full w-full object-contain" />
+            </div>
           <span className="text-lg font-semibold tracking-tight">LG IA</span>
         </Link>
 

@@ -31,9 +31,9 @@ function Obrigado() {
           <span>Confira sua caixa de entrada (e o spam, só por garantia).</span>
         </div>
 
-        <Button asChild size="lg" className="mt-8 w-full bg-gradient-brand text-brand-foreground shadow-glow hover:opacity-90">
+        <Button asChild size="lg" className="mt-8 w-full  text-brand-foreground shadow-glow hover:opacity-90">
           <Link to="/">
-            <Bot className="mr-2 h-4 w-4" /> Voltar ao site
+            <img src="/icon.png" alt="LG IA" className="h-full w-full object-contain" /> Voltar ao site
           </Link>
         </Button>
       </Card>

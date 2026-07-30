@@ -24,9 +24,27 @@ export const Route = createFileRoute("/cadastro")({
   component: Cadastro,
 });
 
+// Lista Fixa de Categorias
+const CATEGORIAS_OPCOES = [
+  "Pizzas",
+  "Hambúrgueres",
+  "Bebidas",
+  "Sobremesas",
+  "Porções",
+  "Outros",
+] as const;
+
+// Helper para validar telefone brasileiro (com ou sem máscara)
+const phoneRegex = /^(?:\+?55\s?)?(?:\(?\d{2}\)?\s?)?(?:9\d{4}|\d{4})[-\s]?\d{4}$/;
+
+// Helper para validar Chave Pix (CPF, CNPJ, Email, TelefoneBR ou Aleatória UUID/EVM)
+const pixRegex = /^(?:\d{11}|\d{14}|[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}|\+?55\d{10,11}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$/;
+
 // Item do Cardápio
 const itemCardapioSchema = z.object({
-  categoria: z.string().trim().min(2, "Informe a categoria (ex: Pizzas, Bebidas)"),
+  categoria: z.enum(CATEGORIAS_OPCOES, {
+    errorMap: () => ({ message: "Selecione uma categoria válida" }),
+  }),
   item_nome: z.string().trim().min(2, "Informe o nome do item"),
   descricao: z.string().trim().optional(),
   preco: z.coerce.number().gt(0, "O preço deve ser maior que 0"),
@@ -37,11 +55,20 @@ export type ItemCardapio = z.infer<typeof itemCardapioSchema>;
 
 const schema = z.object({
   nomeEmpresa: z.string().trim().min(2, "Nome da empresa é obrigatório"),
-  email: z.string().trim().email("Email inválido").max(255),
+  email: z.string().trim().email("Informe um e-mail válido").max(255),
   senha: z.string().min(8, "Mínimo de 8 caracteres").max(72),
-  telefone: z.string().trim().min(10, "Telefone inválido").max(20),
-  telefoneComercial: z.string().trim().min(10, "WhatsApp comercial inválido").max(20),
-  pix: z.string().trim().min(4, "Informe sua chave Pix").max(150),
+  telefone: z
+    .string()
+    .trim()
+    .regex(phoneRegex, "Telefone inválido (use DDD + número)"),
+  telefoneComercial: z
+    .string()
+    .trim()
+    .regex(phoneRegex, "WhatsApp inválido (use DDD + número)"),
+  pix: z
+    .string()
+    .trim()
+    .regex(pixRegex, "Informe uma chave Pix válida (CPF, CNPJ, Email, Tel ou Aleatória)"),
   cardapio: z.array(itemCardapioSchema).min(1, "Adicione pelo menos 1 item ao cardápio"),
 });
 
@@ -56,7 +83,7 @@ const initial: FormData = {
   pix: "",
   cardapio: [
     {
-      categoria: "Pizzas Tradicionais",
+      categoria: "Pizzas",
       item_nome: "Calabresa",
       descricao: "Molho de tomate, muçarela, calabresa fatiada e cebola",
       preco: 45,
@@ -145,27 +172,31 @@ function Cadastro() {
     }));
   }
 
-// DENTRO DE cadastro.tsx -> handlePay()
+  async function handlePay() {
+    setSubmitting(true);
 
-async function handlePay() {
-  setSubmitting(true);
+    try {
+      const res = await cadastrarEmpresaFn({ data });
 
-  try {
-    const res = await cadastrarEmpresaFn({ data });
+      // Registra a conta no client e salva o ID da empresa recém-criada
+      registerAccount({ ...data, id: res.empresaId });
+      markSignedIn(res.empresaId);
 
-    // Registra a conta no client e salva o ID da empresa recém-criada
-    registerAccount({ ...data, id: res.empresaId });
-    markSignedIn(res.empresaId); // ✅ Passa o ID retornado pelo backend
+      setSubmitting(false);
+      toast.success("Assinatura realizada e cadastro concluído!");
+      navigate({ to: "/obrigado" });
+    } catch (e: any) {
+      setSubmitting(false);
+      console.error("Erro no cliente:", e);
 
-    setSubmitting(false);
-    toast.success("Assinatura realizada e cadastro concluído!");
-    navigate({ to: "/obrigado" });
-  } catch (e: any) {
-    setSubmitting(false);
-    console.error("Erro no cliente:", e);
-    toast.error(e.message || "Erro ao finalizar cadastro. Tente novamente.");
+      const msg = e.message?.toLowerCase() || "";
+      if (msg.includes("já cadastrado") || msg.includes("duplicate") || msg.includes("unique")) {
+        toast.error("Estes dados (e-mail ou telefone) já foram cadastrados por outro cliente.");
+      } else {
+        toast.error(e.message || "Erro ao finalizar cadastro. Tente novamente.");
+      }
+    }
   }
-}
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -173,8 +204,8 @@ async function handlePay() {
       <div className="border-b border-border/60 bg-background/70 backdrop-blur-lg">
         <div className="mx-auto flex h-16 max-w-4xl items-center justify-between px-6">
           <Link to="/" className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-brand shadow-glow">
-              <Bot className="h-5 w-5 text-brand-foreground" />
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-transparent shadow-glow">
+              <img src="/icon.png" alt="LG IA" className="h-full w-full object-contain" />
             </div>
             <span className="text-lg font-semibold tracking-tight">LG IA</span>
           </Link>
@@ -225,12 +256,14 @@ async function handlePay() {
                 <Field label="Seu telefone (contato)" error={errors.telefone}>
                   <Input
                     type="tel"
+                    maxLength={11}
                     value={data.telefone}
-                    onChange={(e) => update("telefone", e.target.value)}
-                    placeholder="(34) 99999-9999"
+                    onChange={(e) => update("telefone", e.target.value.replace(/\D/g, ""))}
+                    placeholder="34999999999"
                     autoComplete="tel"
                   />
                 </Field>
+
                 <Field
                   label="WhatsApp comercial (atendimento)"
                   error={errors.telefoneComercial}
@@ -238,9 +271,10 @@ async function handlePay() {
                 >
                   <Input
                     type="tel"
+                    maxLength={11}
                     value={data.telefoneComercial}
-                    onChange={(e) => update("telefoneComercial", e.target.value)}
-                    placeholder="(34) 98888-8888"
+                    onChange={(e) => update("telefoneComercial", e.target.value.replace(/\D/g, ""))}
+                    placeholder="34988888888"
                   />
                 </Field>
                 <Field
@@ -251,7 +285,7 @@ async function handlePay() {
                   <Input
                     value={data.pix}
                     onChange={(e) => update("pix", e.target.value)}
-                    placeholder="CPF, CNPJ, Email ou Chave aleatória"
+                    placeholder="CPF, CNPJ, Email, Tel ou Chave aleatória"
                   />
                 </Field>
               </div>
@@ -289,11 +323,19 @@ async function handlePay() {
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                   <div>
                     <Label className="text-xs">Categoria</Label>
-                    <Input
-                      placeholder="Ex: Pizzas, Bebidas, Doces"
+                    <select
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                       value={novoItem.categoria}
-                      onChange={(e) => setNovoItem({ ...novoItem, categoria: e.target.value })}
-                    />
+                      onChange={(e) =>
+                        setNovoItem({ ...novoItem, categoria: e.target.value as ItemCardapio["categoria"] })
+                      }
+                    >
+                      {CATEGORIAS_OPCOES.map((cat) => (
+                        <option key={cat} value={cat}>
+                          {cat}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   <div>
                     <Label className="text-xs">Nome do Item</Label>
