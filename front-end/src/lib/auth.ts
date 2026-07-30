@@ -1,103 +1,82 @@
-// Auth stub client-side. Substituir por Lovable Cloud (Supabase Auth) quando
-// integrarmos o pagamento real — a superfície (signIn/signOut/getSession/etc.)
-// já espelha o que a versão final vai usar.
+import { createServerFn } from '@tanstack/react-start';
+import { db } from '@/lib/db';
 
-export type SubscriptionStatus = "active" | "canceled";
-
-export interface AccountSession {
+export interface EmpresaUsuario {
+  id: string | number;
+  nomeEmpresa: string;
   email: string;
   telefone: string;
   telefoneComercial: string;
   pix: string;
-  status: SubscriptionStatus;
-  createdAt: string;
-  nextBillingAt: string;
-  canceledAt?: string;
+  statusAssinatura: 'active' | 'canceled';
+  proximaCobranca: string;
+  criadoEm: string;
 }
 
-const KEY = "lg-ia:session";
-const PW_KEY = "lg-ia:pw";
+export const getUsuarioLogado = createServerFn({ method: 'GET' })
+  .validator((empresaId?: string | number) => empresaId ?? 1)
+  .handler(async ({ data: empresaId }) => {
+    try {
+      const idNumerico = Number(empresaId) || 1;
 
-function isBrowser() {
-  return typeof window !== "undefined";
-}
+      const usuario = await db('empresas')
+        .where({ id: idNumerico })
+        .first();
 
-export function getSession(): AccountSession | null {
-  if (!isBrowser()) return null;
-  try {
-    const raw = window.localStorage.getItem(KEY);
-    return raw ? (JSON.parse(raw) as AccountSession) : null;
-  } catch {
-    return null;
+      if (!usuario) {
+        return null;
+      }
+
+      return {
+        id: usuario.id,
+        nomeEmpresa: usuario.nome_empresa || usuario.nomeEmpresa || 'Minha Empresa',
+        email: usuario.email || '',
+        telefone: usuario.telefone || '',
+        telefoneComercial: usuario.telefone_comercial || usuario.telefoneComercial || '',
+        pix: usuario.pix || '',
+        statusAssinatura: usuario.status_assinatura || usuario.statusAssinatura || 'active',
+        proximaCobranca: usuario.proxima_cobranca || usuario.proximaCobranca || new Date().toISOString(),
+        criadoEm: usuario.criado_em || usuario.criadoEm || new Date().toISOString(),
+      } as EmpresaUsuario;
+    } catch (error) {
+      console.error('Erro interno no servidor ao buscar usuário:', error);
+      return null;
+    }
+  });
+
+export const AUTH_KEY = 'empresa_id';
+
+/**
+ * Salva a sessão do usuário no localStorage
+ */
+export function markSignedIn(empresaId: string | number = 1) {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(AUTH_KEY, String(empresaId));
   }
 }
 
-function setSession(s: AccountSession | null) {
-  if (!isBrowser()) return;
-  if (s) window.localStorage.setItem(KEY, JSON.stringify(s));
-  else window.localStorage.removeItem(KEY);
+/**
+ * Remove a sessão do usuário
+ */
+export function markSignedOut() {
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem(AUTH_KEY);
+  }
 }
 
-function nextMonthISO(from = new Date()) {
-  const d = new Date(from);
-  d.setMonth(d.getMonth() + 1);
-  return d.toISOString();
+/**
+ * Verifica se existe uma sessão ativa no client
+ */
+export function isSignedIn(): boolean {
+  if (typeof window === 'undefined') return false;
+  return Boolean(localStorage.getItem(AUTH_KEY));
 }
 
-export function registerAccount(input: {
-  email: string;
-  senha: string;
-  telefone: string;
-  telefoneComercial: string;
-  pix: string;
-}) {
-  const session: AccountSession = {
-    email: input.email,
-    telefone: input.telefone,
-    telefoneComercial: input.telefoneComercial,
-    pix: input.pix,
-    status: "active",
-    createdAt: new Date().toISOString(),
-    nextBillingAt: nextMonthISO(),
-  };
-  setSession(session);
-  if (isBrowser()) window.localStorage.setItem(PW_KEY, input.senha);
-}
-
-export function signIn(email: string, senha: string): boolean {
-  const s = getSession();
-  const pw = isBrowser() ? window.localStorage.getItem(PW_KEY) : null;
-  if (!s || !pw) return false;
-  return s.email.toLowerCase() === email.toLowerCase() && pw === senha;
-}
-
-export function signOut() {
-  // mantém a conta (assinatura), apenas encerra a "sessão de UI"
-  if (isBrowser()) window.sessionStorage.removeItem("lg-ia:auth");
-}
-
-export function markSignedIn() {
-  if (isBrowser()) window.sessionStorage.setItem("lg-ia:auth", "1");
-}
-
-export function isSignedIn() {
-  if (!isBrowser()) return false;
-  return window.sessionStorage.getItem("lg-ia:auth") === "1";
-}
-
-export function cancelSubscription() {
-  const s = getSession();
-  if (!s) return;
-  setSession({ ...s, status: "canceled", canceledAt: new Date().toISOString() });
-}
-
-export function reactivateSubscription() {
-  const s = getSession();
-  if (!s) return;
-  setSession({
-    ...s,
-    status: "active",
-    canceledAt: undefined,
-    nextBillingAt: nextMonthISO(),
-  });
+/**
+ * Registra localmente os dados da conta cadastrada
+ */
+export function registerAccount(dados: any) {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('dados_empresa', JSON.stringify(dados));
+  }
 }

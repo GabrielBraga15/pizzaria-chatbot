@@ -6,8 +6,9 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { ArrowLeft, ArrowRight, Bot, Check, Lock } from "lucide-react";
+import { ArrowLeft, ArrowRight, Bot, Check, Lock, Plus, Trash2, Utensils } from "lucide-react";
 import { markSignedIn, registerAccount } from "@/lib/auth";
+import { cadastrarEmpresaFn } from "@/lib/cadastro";
 
 export const Route = createFileRoute("/cadastro")({
   head: () => ({
@@ -23,30 +24,63 @@ export const Route = createFileRoute("/cadastro")({
   component: Cadastro,
 });
 
+// Item do Cardápio
+const itemCardapioSchema = z.object({
+  categoria: z.string().trim().min(2, "Informe a categoria (ex: Pizzas, Bebidas)"),
+  item_nome: z.string().trim().min(2, "Informe o nome do item"),
+  descricao: z.string().trim().optional(),
+  preco: z.coerce.number().gt(0, "O preço deve ser maior que 0"),
+  disponivel: z.boolean().default(true),
+});
+
+export type ItemCardapio = z.infer<typeof itemCardapioSchema>;
+
 const schema = z.object({
+  nomeEmpresa: z.string().trim().min(2, "Nome da empresa é obrigatório"),
   email: z.string().trim().email("Email inválido").max(255),
   senha: z.string().min(8, "Mínimo de 8 caracteres").max(72),
   telefone: z.string().trim().min(10, "Telefone inválido").max(20),
   telefoneComercial: z.string().trim().min(10, "WhatsApp comercial inválido").max(20),
   pix: z.string().trim().min(4, "Informe sua chave Pix").max(150),
+  cardapio: z.array(itemCardapioSchema).min(1, "Adicione pelo menos 1 item ao cardápio"),
 });
 
 type FormData = z.infer<typeof schema>;
 
 const initial: FormData = {
+  nomeEmpresa: "",
   email: "",
   senha: "",
   telefone: "",
   telefoneComercial: "",
   pix: "",
+  cardapio: [
+    {
+      categoria: "Pizzas Tradicionais",
+      item_nome: "Calabresa",
+      descricao: "Molho de tomate, muçarela, calabresa fatiada e cebola",
+      preco: 45,
+      disponivel: true,
+    },
+  ],
 };
 
 function Cadastro() {
   const navigate = useNavigate();
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [data, setData] = useState<FormData>(initial);
   const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
   const [submitting, setSubmitting] = useState(false);
+
+  // Estado temporário para novos itens no Step 2
+  const [novoItem, setNovoItem] = useState<ItemCardapio>({
+    categoria: "Pizzas",
+    item_nome: "",
+    descricao: "",
+    preco: 0,
+    disponivel: true,
+  });
+  const [cardapioError, setCardapioError] = useState<string | null>(null);
 
   function update<K extends keyof FormData>(k: K, v: FormData[K]) {
     setData((d) => ({ ...d, [k]: v }));
@@ -56,6 +90,7 @@ function Cadastro() {
   function validateStep1() {
     const partial = schema
       .pick({
+        nomeEmpresa: true,
         email: true,
         senha: true,
         telefone: true,
@@ -63,6 +98,7 @@ function Cadastro() {
         pix: true,
       })
       .safeParse(data);
+
     if (!partial.success) {
       const errs: Partial<Record<keyof FormData, string>> = {};
       for (const iss of partial.error.issues) {
@@ -75,19 +111,65 @@ function Cadastro() {
     return true;
   }
 
-  async function handlePay() {
-    setSubmitting(true);
-    // Placeholder de pagamento — integração real (Stripe/Mercado Pago) entra aqui.
-    await new Promise((r) => setTimeout(r, 1400));
-    registerAccount(data);
-    markSignedIn();
-    setSubmitting(false);
-    toast.success("Pagamento simulado com sucesso!");
-    navigate({ to: "/obrigado" });
+  function validateStep2() {
+    if (data.cardapio.length === 0) {
+      setCardapioError("Adicione pelo menos um item ao cardápio para continuar.");
+      return false;
+    }
+    setCardapioError(null);
+    return true;
   }
+
+  function adicionarItemCardapio() {
+    const parsed = itemCardapioSchema.safeParse(novoItem);
+    if (!parsed.success) {
+      toast.error(parsed.error.issues[0].message);
+      return;
+    }
+    setData((d) => ({ ...d, cardapio: [...d.cardapio, parsed.data] }));
+    setNovoItem({
+      categoria: novoItem.categoria,
+      item_nome: "",
+      descricao: "",
+      preco: 0,
+      disponivel: true,
+    });
+    setCardapioError(null);
+    toast.success("Item adicionado ao cardápio!");
+  }
+
+  function removerItemCardapio(index: number) {
+    setData((d) => ({
+      ...d,
+      cardapio: d.cardapio.filter((_, i) => i !== index),
+    }));
+  }
+
+// DENTRO DE cadastro.tsx -> handlePay()
+
+async function handlePay() {
+  setSubmitting(true);
+
+  try {
+    const res = await cadastrarEmpresaFn({ data });
+
+    // Registra a conta no client e salva o ID da empresa recém-criada
+    registerAccount({ ...data, id: res.empresaId });
+    markSignedIn(res.empresaId); // ✅ Passa o ID retornado pelo backend
+
+    setSubmitting(false);
+    toast.success("Assinatura realizada e cadastro concluído!");
+    navigate({ to: "/obrigado" });
+  } catch (e: any) {
+    setSubmitting(false);
+    console.error("Erro no cliente:", e);
+    toast.error(e.message || "Erro ao finalizar cadastro. Tente novamente.");
+  }
+}
 
   return (
     <div className="min-h-screen bg-background text-foreground">
+      {/* Header */}
       <div className="border-b border-border/60 bg-background/70 backdrop-blur-lg">
         <div className="mx-auto flex h-16 max-w-4xl items-center justify-between px-6">
           <Link to="/" className="flex items-center gap-2">
@@ -102,17 +184,26 @@ function Cadastro() {
         </div>
       </div>
 
-      <div className="mx-auto max-w-2xl px-6 py-16">
+      <div className="mx-auto max-w-2xl px-6 py-12">
         <Stepper step={step} />
 
         <Card className="mt-8 border-border/60 bg-card/80 p-8 shadow-card">
+          {/* STEP 1: DADOS DE ACESSO E CONTA */}
           {step === 1 && (
             <div>
               <h1 className="text-2xl font-semibold tracking-tight">Seus dados de acesso</h1>
               <p className="mt-1 text-sm text-muted-foreground">
-                Vamos usar esses dados para liberar seu acesso após o pagamento.
+                Informe o nome da sua empresa e seus dados de login.
               </p>
               <div className="mt-6 grid gap-5">
+                <Field label="Nome da Empresa / Pizzaria" error={errors.nomeEmpresa}>
+                  <Input
+                    type="text"
+                    value={data.nomeEmpresa}
+                    onChange={(e) => update("nomeEmpresa", e.target.value)}
+                    placeholder="Ex: Pizzaria LG IA"
+                  />
+                </Field>
                 <Field label="Email" error={errors.email}>
                   <Input
                     type="email"
@@ -136,31 +227,31 @@ function Cadastro() {
                     type="tel"
                     value={data.telefone}
                     onChange={(e) => update("telefone", e.target.value)}
-                    placeholder="(11) 99999-9999"
+                    placeholder="(34) 99999-9999"
                     autoComplete="tel"
                   />
                 </Field>
                 <Field
                   label="WhatsApp comercial (atendimento)"
                   error={errors.telefoneComercial}
-                  hint="Número que a IA vai usar para atender seus clientes"
+                  hint="Número onde o robô de IA irá responder aos seus clientes"
                 >
                   <Input
                     type="tel"
                     value={data.telefoneComercial}
                     onChange={(e) => update("telefoneComercial", e.target.value)}
-                    placeholder="(11) 3333-4444"
+                    placeholder="(34) 98888-8888"
                   />
                 </Field>
                 <Field
                   label="Chave Pix para receber pagamentos"
                   error={errors.pix}
-                  hint="Vamos enviar aos seus clientes junto com o pedido"
+                  hint="Será enviada pela IA ao cliente na confirmação do pedido"
                 >
                   <Input
                     value={data.pix}
                     onChange={(e) => update("pix", e.target.value)}
-                    placeholder="CPF, email, telefone ou chave aleatória"
+                    placeholder="CPF, CNPJ, Email ou Chave aleatória"
                   />
                 </Field>
               </div>
@@ -172,25 +263,118 @@ function Cadastro() {
                     if (validateStep1()) setStep(2);
                   }}
                 >
-                  Continuar <ArrowRight className="ml-1 h-4 w-4" />
+                  Montar Cardápio <ArrowRight className="ml-1 h-4 w-4" />
                 </Button>
               </div>
             </div>
           )}
 
+          {/* STEP 2: CARDÁPIO INICIAL */}
           {step === 2 && (
             <div>
-              <h1 className="text-2xl font-semibold tracking-tight">Confirme seus dados</h1>
+              <div className="flex items-center gap-2">
+                <Utensils className="h-6 w-6 text-primary" />
+                <h1 className="text-2xl font-semibold tracking-tight">
+                  Monte seu Cardápio Inicial
+                </h1>
+              </div>
               <p className="mt-1 text-sm text-muted-foreground">
-                Revise antes de seguir para o pagamento.
+                Cadastre os produtos que o atendente IA deve oferecer aos seus clientes. Você poderá
+                alterar tudo no painel depois.
               </p>
-              <dl className="mt-6 divide-y divide-border/60 rounded-lg border border-border/60 bg-secondary/30">
-                <Row k="Email" v={data.email} />
-                <Row k="Senha" v={"•".repeat(Math.min(data.senha.length, 12))} />
-                <Row k="Seu telefone" v={data.telefone} />
-                <Row k="WhatsApp comercial" v={data.telefoneComercial} />
-                <Row k="Chave Pix" v={data.pix} />
-              </dl>
+
+              {/* Formulário de Adicionar Item */}
+              <div className="mt-6 rounded-xl border border-border/80 bg-secondary/20 p-4 space-y-3">
+                <h3 className="text-sm font-semibold">Adicionar novo item</h3>
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <div>
+                    <Label className="text-xs">Categoria</Label>
+                    <Input
+                      placeholder="Ex: Pizzas, Bebidas, Doces"
+                      value={novoItem.categoria}
+                      onChange={(e) => setNovoItem({ ...novoItem, categoria: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Nome do Item</Label>
+                    <Input
+                      placeholder="Ex: Calabresa Especial"
+                      value={novoItem.item_nome}
+                      onChange={(e) => setNovoItem({ ...novoItem, item_nome: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-xs">Descrição / Ingredientes</Label>
+                  <Input
+                    placeholder="Ex: Molho de tomate, muçarela, calabresa e cebola"
+                    value={novoItem.descricao || ""}
+                    onChange={(e) => setNovoItem({ ...novoItem, descricao: e.target.value })}
+                  />
+                </div>
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2 items-end">
+                  <div>
+                    <Label className="text-xs">Preço (R$)</Label>
+                    <Input
+                      type="number"
+                      step="0.50"
+                      placeholder="0.00"
+                      value={novoItem.preco || ""}
+                      onChange={(e) => setNovoItem({ ...novoItem, preco: Number(e.target.value) })}
+                    />
+                  </div>
+                  <Button type="button" onClick={adicionarItemCardapio} className="w-full">
+                    <Plus className="mr-1 h-4 w-4" /> Adicionar Item
+                  </Button>
+                </div>
+              </div>
+
+              {cardapioError && (
+                <p className="mt-2 text-xs text-destructive font-medium">{cardapioError}</p>
+              )}
+
+              {/* Lista de Itens Adicionados */}
+              <div className="mt-6 space-y-3">
+                <Label className="text-sm font-semibold">
+                  Itens no cardápio ({data.cardapio.length})
+                </Label>
+                {data.cardapio.length === 0 ? (
+                  <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">
+                    Nenhum item adicionado ainda.
+                  </div>
+                ) : (
+                  <div className="max-h-60 overflow-y-auto space-y-2 pr-1">
+                    {data.cardapio.map((item, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between rounded-lg border border-border/60 bg-background p-3 text-sm"
+                      >
+                        <div>
+                          <span className="text-xs rounded bg-primary/10 px-2 py-0.5 text-primary font-medium mr-2">
+                            {item.categoria}
+                          </span>
+                          <span className="font-medium text-foreground">{item.item_nome}</span>
+                          <p className="text-xs text-muted-foreground">{item.descricao}</p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="font-semibold text-foreground">
+                            R$ {Number(item.preco).toFixed(2)}
+                          </span>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                            onClick={() => removerItemCardapio(idx)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <div className="mt-8 flex justify-between">
                 <Button variant="ghost" onClick={() => setStep(1)}>
                   <ArrowLeft className="mr-1 h-4 w-4" /> Voltar
@@ -198,7 +382,58 @@ function Cadastro() {
                 <Button
                   size="lg"
                   className="bg-gradient-brand text-brand-foreground shadow-glow hover:opacity-90"
-                  onClick={() => setStep(3)}
+                  onClick={() => {
+                    if (validateStep2()) setStep(3);
+                  }}
+                >
+                  Revisar Cadastro <ArrowRight className="ml-1 h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* STEP 3: REVISÃO DE DADOS E CARDÁPIO */}
+          {step === 3 && (
+            <div>
+              <h1 className="text-2xl font-semibold tracking-tight">Confirme seus dados</h1>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Revise as informações da conta e do cardápio antes do pagamento.
+              </p>
+
+              <dl className="mt-6 divide-y divide-border/60 rounded-lg border border-border/60 bg-secondary/30">
+                <Row k="Empresa" v={data.nomeEmpresa} />
+                <Row k="Email" v={data.email} />
+                <Row k="Senha" v={"•".repeat(Math.min(data.senha.length, 12))} />
+                <Row k="Seu telefone" v={data.telefone} />
+                <Row k="WhatsApp comercial" v={data.telefoneComercial} />
+                <Row k="Chave Pix" v={data.pix} />
+                <Row k="Itens no Cardápio" v={`${data.cardapio.length} itens cadastrados`} />
+              </dl>
+
+              <div className="mt-4 rounded-lg border border-border/60 p-3 bg-background/50">
+                <span className="text-xs font-semibold text-muted-foreground">
+                  Resumo do Cardápio:
+                </span>
+                <ul className="mt-1 max-h-32 overflow-y-auto divide-y divide-border/40 text-xs">
+                  {data.cardapio.map((item, i) => (
+                    <li key={i} className="py-1.5 flex justify-between">
+                      <span>
+                        {item.item_nome} ({item.categoria})
+                      </span>
+                      <span className="font-semibold">R$ {Number(item.preco).toFixed(2)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="mt-8 flex justify-between">
+                <Button variant="ghost" onClick={() => setStep(2)}>
+                  <ArrowLeft className="mr-1 h-4 w-4" /> Voltar ao Cardápio
+                </Button>
+                <Button
+                  size="lg"
+                  className="bg-gradient-brand text-brand-foreground shadow-glow hover:opacity-90"
+                  onClick={() => setStep(4)}
                 >
                   Ir para pagamento <ArrowRight className="ml-1 h-4 w-4" />
                 </Button>
@@ -206,10 +441,13 @@ function Cadastro() {
             </div>
           )}
 
-          {step === 3 && (
+          {/* STEP 4: PAGAMENTO */}
+          {step === 4 && (
             <div>
               <h1 className="text-2xl font-semibold tracking-tight">Pagamento</h1>
-              <p className="mt-1 text-sm text-muted-foreground">Assinatura mensal do LG IA.</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Assinatura mensal do sistema LG IA.
+              </p>
 
               <div className="mt-6 rounded-xl border border-primary/30 bg-gradient-hero p-6">
                 <div className="flex-col md:flex md:items-baseline md:justify-between">
@@ -224,7 +462,7 @@ function Cadastro() {
                     <Check className="h-4 w-4 text-primary" /> Atendimento 24h com IA humanizada
                   </li>
                   <li className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-primary" /> Cardápio automático + pedidos no
+                    <Check className="h-4 w-4 text-primary" /> Cardápio interativo e pedidos no
                     WhatsApp
                   </li>
                   <li className="flex items-center gap-2">
@@ -238,13 +476,13 @@ function Cadastro() {
                   <Lock className="h-4 w-4" /> Checkout seguro
                 </div>
                 <p className="mt-1">
-                  A integração de pagamento real (Stripe / Mercado Pago) será conectada aqui. Ao
-                  confirmar, vamos simular a compra e liberar seu acesso por email.
+                  Ao confirmar, simularemos a contratação do plano e seu cardápio será
+                  automaticamente sincronizado no banco de dados.
                 </p>
               </div>
 
               <div className="mt-8 flex justify-between">
-                <Button variant="ghost" onClick={() => setStep(2)} disabled={submitting}>
+                <Button variant="ghost" onClick={() => setStep(3)} disabled={submitting}>
                   <ArrowLeft className="mr-1 h-4 w-4" /> Voltar
                 </Button>
                 <Button
@@ -253,7 +491,7 @@ function Cadastro() {
                   onClick={handlePay}
                   className="bg-gradient-brand text-brand-foreground shadow-glow hover:opacity-90"
                 >
-                  {submitting ? "Processando..." : "Pagar R$ 200 e ativar"}
+                  {submitting ? "Processando..." : "Pagar R$ 200 e Ativar Bot"}
                 </Button>
               </div>
             </div>
@@ -264,21 +502,22 @@ function Cadastro() {
   );
 }
 
-function Stepper({ step }: { step: 1 | 2 | 3 }) {
+function Stepper({ step }: { step: 1 | 2 | 3 | 4 }) {
   const items = [
-    { n: 1, label: "Dados" },
-    { n: 2, label: "Revisão" },
-    { n: 3, label: "Pagamento" },
+    { n: 1, label: "Conta" },
+    { n: 2, label: "Cardápio" },
+    { n: 3, label: "Revisão" },
+    { n: 4, label: "Pagamento" },
   ];
   return (
-    <div className=" md:flex md:items-center md:justify-center md:gap-2">
+    <div className="flex items-center justify-between gap-1 md:justify-center md:gap-2">
       {items.map((it, i) => {
         const active = step === it.n;
         const done = step > it.n;
         return (
-          <div key={it.n} className="flex items-center gap-2 ">
+          <div key={it.n} className="flex items-center gap-1.5 md:gap-2">
             <div
-              className={`flex h-8 w-8 mb-2 md:mb-0 items-center justify-center rounded-full text-xs font-semibold transition ${
+              className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold transition ${
                 done
                   ? "bg-primary text-primary-foreground"
                   : active
@@ -289,11 +528,11 @@ function Stepper({ step }: { step: 1 | 2 | 3 }) {
               {done ? <Check className="h-4 w-4" /> : it.n}
             </div>
             <span
-              className={`text-sm ${active ? "text-foreground" : "text-muted-foreground"} mb-2 md:mb-0`}
+              className={`text-xs md:text-sm ${active ? "font-semibold text-foreground" : "text-muted-foreground"}`}
             >
               {it.label}
             </span>
-            {i < items.length - 1 && <div className="mx-2 h-px w-10 bg-border" />}
+            {i < items.length - 1 && <div className="h-px w-4 bg-border md:w-8" />}
           </div>
         );
       })}

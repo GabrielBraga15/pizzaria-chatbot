@@ -5,8 +5,8 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Bot, LogIn } from "lucide-react";
-import { signIn, markSignedIn } from "@/lib/auth";
+import { Bot, LogIn, Loader2 } from "lucide-react";
+import { loginFn } from "@/lib/login";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -27,15 +27,33 @@ function LoginPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
-    const ok = signIn(email.trim(), senha);
-    setLoading(false);
-    if (!ok) {
-      toast.error("Email ou senha incorretos.");
-      return;
+
+    try {
+      const res = await loginFn({ data: { email, senha } });
+
+      if (!res.success || !res.empresa) {
+        toast.error(res.message || "Email ou senha incorretos.");
+        setLoading(false);
+        return;
+      }
+
+      // 1. Salva a sessão compatível com a rota /painel
+      // Se a sua API gerar JWT use ele; caso contrário, usamos o ID/token retornado
+      const token = (res as any).token || String(res.empresa.id);
+      localStorage.setItem("auth_token", token);
+      localStorage.setItem("empresa_id", String(res.empresa.id));
+      localStorage.setItem("empresa_user", JSON.stringify(res.empresa));
+
+      toast.success(`Bem-vindo de volta, ${res.empresa.nome_empresa}!`);
+
+      // 2. Aguarda a navegação do TanStack Router
+      await navigate({ to: "/painel" });
+    } catch (error) {
+      console.error("Erro ao realizar login:", error);
+      toast.error("Erro ao conectar com o banco de dados.");
+    } finally {
+      setLoading(false);
     }
-    markSignedIn();
-    toast.success("Bem-vindo de volta!");
-    navigate({ to: "/painel" });
   }
 
   return (
@@ -55,8 +73,9 @@ function LoginPage() {
 
         <form onSubmit={handleSubmit} className="mt-6 grid gap-4">
           <div className="grid gap-1.5">
-            <Label>Email</Label>
+            <Label htmlFor="email">Email</Label>
             <Input
+              id="email"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -65,9 +84,11 @@ function LoginPage() {
               required
             />
           </div>
+
           <div className="grid gap-1.5">
-            <Label>Senha</Label>
+            <Label htmlFor="senha">Senha</Label>
             <Input
+              id="senha"
               type="password"
               value={senha}
               onChange={(e) => setSenha(e.target.value)}
@@ -83,8 +104,15 @@ function LoginPage() {
             disabled={loading}
             className="mt-2 bg-gradient-brand text-brand-foreground shadow-glow hover:opacity-90"
           >
-            <LogIn className="mr-2 h-4 w-4" />
-            {loading ? "Entrando..." : "Entrar"}
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Entrando...
+              </>
+            ) : (
+              <>
+                <LogIn className="mr-2 h-4 w-4" /> Entrar
+              </>
+            )}
           </Button>
         </form>
 
