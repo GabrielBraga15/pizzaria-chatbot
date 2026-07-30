@@ -14,6 +14,7 @@ import { Route as CadastroRouteImport } from './routes/cadastro'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as ObrigadoRouteImport } from './routes/obrigado'
 import { Route as PainelRouteImport } from './routes/painel'
+import { Route as ApiWebhookEvolutionRouteImport } from './routes/api/webhook/evolution'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -40,6 +41,11 @@ const PainelRoute = PainelRouteImport.update({
   path: '/painel',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiWebhookEvolutionRoute = ApiWebhookEvolutionRouteImport.update({
+  id: '/api/webhook/evolution',
+  path: '/api/webhook/evolution',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -47,6 +53,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/obrigado': typeof ObrigadoRoute
   '/painel': typeof PainelRoute
+  '/api/webhook/evolution': typeof ApiWebhookEvolutionRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -54,6 +61,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/obrigado': typeof ObrigadoRoute
   '/painel': typeof PainelRoute
+  '/api/webhook/evolution': typeof ApiWebhookEvolutionRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -62,13 +70,33 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/obrigado': typeof ObrigadoRoute
   '/painel': typeof PainelRoute
+  '/api/webhook/evolution': typeof ApiWebhookEvolutionRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/cadastro' | '/login' | '/obrigado' | '/painel'
+  fullPaths:
+    | '/'
+    | '/cadastro'
+    | '/login'
+    | '/obrigado'
+    | '/painel'
+    | '/api/webhook/evolution'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/cadastro' | '/login' | '/obrigado' | '/painel'
-  id: '__root__' | '/' | '/cadastro' | '/login' | '/obrigado' | '/painel'
+  to:
+    | '/'
+    | '/cadastro'
+    | '/login'
+    | '/obrigado'
+    | '/painel'
+    | '/api/webhook/evolution'
+  id:
+    | '__root__'
+    | '/'
+    | '/cadastro'
+    | '/login'
+    | '/obrigado'
+    | '/painel'
+    | '/api/webhook/evolution'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -77,6 +105,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   ObrigadoRoute: typeof ObrigadoRoute
   PainelRoute: typeof PainelRoute
+  ApiWebhookEvolutionRoute: typeof ApiWebhookEvolutionRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -116,6 +145,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PainelRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/webhook/evolution': {
+      id: '/api/webhook/evolution'
+      path: '/api/webhook/evolution'
+      fullPath: '/api/webhook/evolution'
+      preLoaderRoute: typeof ApiWebhookEvolutionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -125,6 +161,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   ObrigadoRoute: ObrigadoRoute,
   PainelRoute: PainelRoute,
+  ApiWebhookEvolutionRoute: ApiWebhookEvolutionRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

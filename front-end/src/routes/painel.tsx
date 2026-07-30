@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import {ModalConectarBot} from '@/components/ui/handlegerarqrcode';
 import { getUsuarioLogado } from '@/lib/auth';
 import {
   getCardapio,
@@ -677,6 +678,7 @@ async function handleSaveItem() {
           </dl>
         </Card>
       </main>
+      <ModalConectarBot empresaId={usuario ? Number(usuario.id) : 0} />
     </div>
   );
 }
