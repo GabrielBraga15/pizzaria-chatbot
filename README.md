@@ -4,3 +4,38 @@ GEMINI_API_KEY=
 MODELO_PRINCIPAL= (MODELO DA IA PRINCIPAL)
 MODELO_FALLBACK= (MODELO DA IA FALLBACK CASO A PRINCIPAL DER ERRO)
 ARQUIVO_HISTORICO=historico_conversas.json
+
+DB_HOST=
+DB_PORT=
+DB_NAME=
+DB_USER=
+DB_PASSWORD=
+
+DATABASE_URL=
+
+MODELO DO BANCO 
+
+-- 1. Tabela de Empresas
+CREATE TABLE "empresas" (
+    "id" SERIAL PRIMARY KEY,
+    "nome_empresa" VARCHAR(255) NOT NULL,
+    "email" VARCHAR(255) NOT NULL UNIQUE,
+    "senha" VARCHAR(255) NOT NULL,
+    "telefone" VARCHAR(20),
+    "telefone_comercial" VARCHAR(20),
+    "pix" VARCHAR(255),
+    "created_at" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 2. Tabela de Cardápio
+CREATE TABLE "cardapio" (
+    "id" SERIAL PRIMARY KEY,
+    "empresa_id" INTEGER NOT NULL REFERENCES "empresas"("id") ON DELETE CASCADE,
+    "categoria" VARCHAR(100) NOT NULL,
+    "item_nome" VARCHAR(255) NOT NULL,
+    "descricao" TEXT DEFAULT '',
+    "preco" NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
+    "disponivel" BOOLEAN NOT NULL DEFAULT true,
+    "created_at" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);

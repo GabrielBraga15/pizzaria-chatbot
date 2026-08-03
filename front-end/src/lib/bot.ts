@@ -2,49 +2,76 @@
 import { createServerFn } from '@tanstack/react-start';
 import { db } from '@/lib/db';
 
-const EVOLUTION_URL = process.env.EVOLUTION_API_URL || 'http://localhost:8080';
+const EVOLUTION_URL = (process.env.EVOLUTION_API_URL || 'http://localhost:8080').replace(/\/$/, '');
 const EVOLUTION_KEY = process.env.EVOLUTION_API_KEY || 'SUA_CHAVE_EVOLUTION';
 
 /**
  * 1. Solicita o QR Code / Pairing Code para a Evolution API
  */
-// src/lib/bot.ts
+export const solicitarQrCodeFn = createServerFn({ method: 'POST' })
+  .validator((data: { empresaId: number }) => data)
+  .handler(async ({ data }) => {
+    const { empresaId } = data;
+    const instanceName = `empresa_${empresaId}`;
 
-export async function solicitarQrCode(nomeInstancia: string) {
-  const baseUrl = process.env.EVOLUTION_API_URL; // ex: http://localhost:8080 ou URL do seu servidor
-  const apiKey = process.env.EVOLUTION_API_KEY;
+    try {
+      // 1. Tenta buscar o QR Code na Evolution API
+      const response = await fetch(`${EVOLUTION_URL}/instance/connect/${instanceName}`, {
+        method: 'GET',
+        headers: {
+          apikey: EVOLUTION_KEY,
+          'Content-Type': 'application/json',
+        },
+      });
 
-  if (!baseUrl || !apiKey) {
-    throw new Error('Configuração da Evolution API ausente nas variáveis de ambiente.');
-  }
+      // Captura o texto bruto primeiro para tratar eventuais retornos HTML
+      const responseText = await response.text();
 
-  // Certifique-se de que a rota de conexão da Evolution está correta
-  // Exemplo padrão da Evolution API v2: /instance/connect/{instance}
-  const url = `${baseUrl.replace(/\/$/, '')}/instance/connect/${nomeInstancia}`;
+      if (!response.ok) {
+        console.error(`❌ Erro Evolution API (${response.status}):`, responseText);
+        return {
+          success: false,
+          message: `A Evolution API retornou status ${response.status}. Verifique as chaves e a instância.`,
+        };
+      }
 
-  const response = await fetch(url, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      'apikey': apiKey,
-    },
+      let resData;
+      try {
+        resData = JSON.parse(responseText);
+      } catch (e) {
+        console.error('❌ Resposta inválida da Evolution API (não-JSON):', responseText);
+        return {
+          success: false,
+          message: 'Resposta inválida recebida da Evolution API.',
+        };
+      }
+
+      // Se retornou imagem/base64 do QR Code ou código
+      if (resData.base64 || resData.code) {
+        return {
+          success: true,
+          status: 'CONNECTING',
+          qrCodeBase64: resData.base64 || resData.code,
+          pairingCode: resData.pairingCode || null,
+        };
+      }
+
+      // Se a instância já estiver aberta/conectada
+      if (resData.instance?.state === 'open') {
+        await db('empresas')
+          .where({ id: empresaId })
+          .update({ bot_status: 'CONNECTED' });
+
+        return { success: true, status: 'CONNECTED' };
+      }
+
+      return { success: false, message: 'Não foi possível gerar o QR Code no momento.' };
+    } catch (error) {
+      console.error('❌ Erro na ServerFn solicitarQrCodeFn:', error);
+      return { success: false, message: 'Erro de comunicação no servidor do WhatsApp.' };
+    }
   });
 
-  // Captura o texto retornado antes de converter para JSON
-  const responseText = await response.text();
-
-  if (!response.ok) {
-    console.error(`❌ Erro HTTP Evolution (${response.status}):`, responseText);
-    throw new Error(`A Evolution API retornou status ${response.status}. Verifique se a URL e a API key estão corretas.`);
-  }
-
-  try {
-    return JSON.parse(responseText);
-  } catch (err) {
-    console.error('❌ Resposta recebida da Evolution (não é JSON):', responseText);
-    throw new Error('A Evolution API retornou uma resposta inválida (HTML em vez de JSON).');
-  }
-}
 /**
  * 2. Verifica o status da conexão do bot no banco Postgres
  */

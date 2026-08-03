@@ -1,0 +1,85 @@
+version: '3.8'
+
+services:
+  # 1. Banco de Dados Postgres
+  postgres_db:
+    image: postgres:15-alpine
+    container_name: postgres_db
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=evolution
+    ports:
+      - "5499:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d evolution"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 2. Redis
+  redis_db:
+    image: redis:7-alpine
+    container_name: redis_db
+    restart: always
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # 3. Bot em Python (FastAPI + Gemini)
+  bot-python:
+    build: ./chatbot-ia
+    container_name: bot_empresa_1
+    restart: always
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./chatbot-ia/.env
+    environment:
+      - DB_HOST=postgres_db
+      - DB_PORT=5432
+    depends_on:
+      postgres_db:
+        condition: service_healthy
+
+  # 4. Evolution API (WhatsApp)
+  evolution_api:
+    image: evoapicloud/evolution-api:v2.3.7
+    container_name: evolution_api
+    restart: always
+    ports:
+      - "8081:8081"
+    environment:
+      - SERVER_PORT=8081
+      
+      # Banco Postgres (Comunicação interna na porta 5432)
+      - DATABASE_PROVIDER=postgresql
+      - DATABASE_CONNECTION_URI=postgresql://postgres:password@postgres_db:5432/evolution?schema=public
+      
+      # Redis com o prefixo CACHE_REDIS_*
+      - CACHE_REDIS_ENABLED=true
+      - CACHE_REDIS_URI=redis://redis_db:6379/0
+      - CACHE_REDIS_PREFIX_KEY=evolution
+      - CACHE_REDIS_TTL=604800
+      
+      # Chave de API da Evolution
+      - AUTHENTICATION_API_KEY=sua_api_key_aqui
+    depends_on:
+      postgres_db:
+        condition: service_healthy
+      redis_db:
+        condition: service_healthy
+
+volumes:
+  redis_data:
+  postgres_data:
