@@ -365,6 +365,7 @@ async function handleSaveItem() {
               Gerencie os itens do seu cardápio integrados à inteligência artificial.
             </p>
           </div>
+          <ModalConectarBot empresaId={usuario ? Number(usuario.id) : 0} />
           <Button
             onClick={openSupport}
             className="bg-gradient-brand text-brand-foreground shadow-glow hover:opacity-90"
@@ -678,7 +679,7 @@ async function handleSaveItem() {
           </dl>
         </Card>
       </main>
-      <ModalConectarBot empresaId={usuario ? Number(usuario.id) : 0} />
+      
     </div>
   );
 }

@@ -46,19 +46,24 @@ Nota: Como o server do Front-End roda diretamente no sistema operacional hospede
 Execute o DDL abaixo no seu gerenciador de banco de dados (evolution) para estruturar as tabelas necessárias para o ecossistema:
 
 SQL
--- 1. TABELA DE EMPRESAS
--- Registra a empresa e o status de conexão com o WhatsApp
-CREATE TABLE IF NOT EXISTS empresas (
+-- 1. TABELA DE EMPRESAS (Compatível com Front-end e Bot)
+CREATE TABLE empresas (
     id SERIAL PRIMARY KEY,
-    nome VARCHAR(255) NOT NULL,
+    nome VARCHAR(255),
+    nome_empresa VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    senha VARCHAR(255) NOT NULL,
+    pix VARCHAR(255),
+    telefone VARCHAR(50),
+    telefone_comercial VARCHAR(50),
+    cnpj_cpf VARCHAR(20),
     whatsapp_num VARCHAR(50),
     bot_status VARCHAR(50) DEFAULT 'OFFLINE',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 2. TABELA DE CARDÁPIOS
--- Fonte da verdade consultada pela IA para apresentar itens e preços atualizados
-CREATE TABLE IF NOT EXISTS cardapios (
+-- 2. TABELA DE CARDÁPIO (No singular 'cardapio')
+CREATE TABLE cardapio (
     id SERIAL PRIMARY KEY,
     empresa_id INT NOT NULL,
     categoria VARCHAR(100) NOT NULL,
@@ -73,9 +78,8 @@ CREATE TABLE IF NOT EXISTS cardapios (
         ON DELETE CASCADE
 );
 
--- 3. TABELA DE HISTÓRICO DE CONVERSAS
--- Armazena o fluxo do chat (mensagens 'user' e 'model') para context window do Gemini
-CREATE TABLE IF NOT EXISTS historico_conversas (
+-- 3. TABELA DE HISTÓRICO DE CONVERSAS (Memória do Gemini)
+CREATE TABLE historico_conversas (
     id SERIAL PRIMARY KEY,
     empresa_id INT NOT NULL,
     cliente_whatsapp VARCHAR(50) NOT NULL,
@@ -89,12 +93,12 @@ CREATE TABLE IF NOT EXISTS historico_conversas (
 );
 
 -- 4. ÍNDICES DE PERFORMANCE
--- Otimiza as buscas de histórico em tempo real e consultas ao cardápio
-CREATE INDEX IF NOT EXISTS idx_historico_busca 
+CREATE INDEX idx_historico_busca 
 ON historico_conversas(empresa_id, cliente_whatsapp, id DESC);
 
-CREATE INDEX IF NOT EXISTS idx_cardapio_empresa 
-ON cardapios(empresa_id);
+CREATE INDEX idx_cardapio_empresa 
+ON cardapio(empresa_id);
+
 🚀 Como Inicializar
 Suba os containers do PostgreSQL e Evolution API via Docker.
 

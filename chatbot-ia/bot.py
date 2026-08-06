@@ -46,9 +46,10 @@ def obter_cardapio_do_banco(empresa_id: int):
         conn = get_db_connection()
         cursor = conn.cursor(cursor_factory=RealDictCursor)
 
+        # Alterado de cardapios para cardapio
         query = """
             SELECT categoria, item_nome, descricao, preco, disponivel 
-            FROM cardapios 
+            FROM cardapio 
             WHERE empresa_id = %s
             ORDER BY categoria, item_nome;
         """
