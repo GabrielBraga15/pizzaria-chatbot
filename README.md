@@ -1,41 +1,109 @@
-MODELO .ENV 
+🍕 Pizzaria LG IA — Documentação do Sistema
+Este repositório contém a infraestrutura e configurações necessárias para rodar o ecossistema do LG IA (Bot de Atendimento Inteligente via WhatsApp com Gemini, FastAPI, Evolution API, TanStack Start e PostgreSQL).
 
-GEMINI_API_KEY=
-MODELO_PRINCIPAL= (MODELO DA IA PRINCIPAL)
-MODELO_FALLBACK= (MODELO DA IA FALLBACK CASO A PRINCIPAL DER ERRO)
+⚙️ Variáveis de Ambiente (.env)
+Crie os arquivos .env nos seus respectivos diretórios baseando-se nos modelos abaixo.
+
+🤖 1. Backend AI (chatbot-ia/.env)
+Snippet de código
+# Google Gemini Config
+GEMINI_API_KEY=sua_gemini_api_key_aqui
+MODELO_PRINCIPAL=gemini-3-flash-preview
+MODELO_FALLBACK=gemini-2.0-flash
 ARQUIVO_HISTORICO=historico_conversas.json
 
-DB_HOST=
-DB_PORT=
-DB_NAME=
-DB_USER=
-DB_PASSWORD=
+# PostgreSQL Database
+DB_HOST=localhost
+DB_PORT=5499
+DB_NAME=evolution
+DB_USER=postgres
+DB_PASSWORD=sua_senha_aqui
 
-DATABASE_URL=
+DATABASE_URL=postgresql://postgres:sua_senha_aqui@localhost:5499/evolution
 
-MODELO DO BANCO 
+# Evolution API (Comunicação interna do Docker)
+EVOLUTION_API_URL="http://evolution_api:8081"
+EVOLUTION_API_KEY="sua_evolution_api_key_aqui"
+Nota: Como o container do bot roda dentro da rede Docker, a EVOLUTION_API_URL aponta para o nome do serviço http://evolution_api:8081.
 
--- 1. Tabela de Empresas
-CREATE TABLE "empresas" (
-    "id" SERIAL PRIMARY KEY,
-    "nome_empresa" VARCHAR(255) NOT NULL,
-    "email" VARCHAR(255) NOT NULL UNIQUE,
-    "senha" VARCHAR(255) NOT NULL,
-    "telefone" VARCHAR(20),
-    "telefone_comercial" VARCHAR(20),
-    "pix" VARCHAR(255),
-    "created_at" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+💻 2. Front-End (front-end/.env)
+Snippet de código
+# PostgreSQL Database
+DB_HOST=localhost
+DB_PORT=5499
+DB_NAME=evolution
+DB_USER=postgres
+DB_PASSWORD=sua_senha_aqui
+
+DATABASE_URL=postgresql://postgres:sua_senha_aqui@localhost:5499/evolution
+
+# Evolution API (Acesso local via máquina host)
+EVOLUTION_API_URL="http://localhost:8081"
+EVOLUTION_API_KEY="sua_evolution_api_key_aqui"
+Nota: Como o server do Front-End roda diretamente no sistema operacional hospedeiro, a EVOLUTION_API_URL aponta para http://localhost:8081.
+
+🗄️ Esquema do Banco de Dados (PostgreSQL)
+Execute o DDL abaixo no seu gerenciador de banco de dados (evolution) para estruturar as tabelas necessárias para o ecossistema:
+
+SQL
+-- 1. TABELA DE EMPRESAS
+-- Registra a empresa e o status de conexão com o WhatsApp
+CREATE TABLE IF NOT EXISTS empresas (
+    id SERIAL PRIMARY KEY,
+    nome VARCHAR(255) NOT NULL,
+    whatsapp_num VARCHAR(50),
+    bot_status VARCHAR(50) DEFAULT 'OFFLINE',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- 2. Tabela de Cardápio
-CREATE TABLE "cardapio" (
-    "id" SERIAL PRIMARY KEY,
-    "empresa_id" INTEGER NOT NULL REFERENCES "empresas"("id") ON DELETE CASCADE,
-    "categoria" VARCHAR(100) NOT NULL,
-    "item_nome" VARCHAR(255) NOT NULL,
-    "descricao" TEXT DEFAULT '',
-    "preco" NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
-    "disponivel" BOOLEAN NOT NULL DEFAULT true,
-    "created_at" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+-- 2. TABELA DE CARDÁPIOS
+-- Fonte da verdade consultada pela IA para apresentar itens e preços atualizados
+CREATE TABLE IF NOT EXISTS cardapios (
+    id SERIAL PRIMARY KEY,
+    empresa_id INT NOT NULL,
+    categoria VARCHAR(100) NOT NULL,
+    item_nome VARCHAR(255) NOT NULL,
+    descricao TEXT,
+    preco DECIMAL(10,2) NOT NULL,
+    disponivel BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_empresa_cardapio 
+        FOREIGN KEY (empresa_id) 
+        REFERENCES empresas(id) 
+        ON DELETE CASCADE
 );
+
+-- 3. TABELA DE HISTÓRICO DE CONVERSAS
+-- Armazena o fluxo do chat (mensagens 'user' e 'model') para context window do Gemini
+CREATE TABLE IF NOT EXISTS historico_conversas (
+    id SERIAL PRIMARY KEY,
+    empresa_id INT NOT NULL,
+    cliente_whatsapp VARCHAR(50) NOT NULL,
+    role VARCHAR(20) NOT NULL, -- 'user' ou 'model'
+    texto TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_empresa_historico 
+        FOREIGN KEY (empresa_id) 
+        REFERENCES empresas(id) 
+        ON DELETE CASCADE
+);
+
+-- 4. ÍNDICES DE PERFORMANCE
+-- Otimiza as buscas de histórico em tempo real e consultas ao cardápio
+CREATE INDEX IF NOT EXISTS idx_historico_busca 
+ON historico_conversas(empresa_id, cliente_whatsapp, id DESC);
+
+CREATE INDEX IF NOT EXISTS idx_cardapio_empresa 
+ON cardapios(empresa_id);
+🚀 Como Inicializar
+Suba os containers do PostgreSQL e Evolution API via Docker.
+
+Crie e popule as tabelas no banco de dados com o DDL fornecido acima.
+
+Configure os arquivos .env no chatbot-ia e front-end.
+
+Inicie a API do bot Python (uvicorn main:app --reload ou via Docker).
+
+Inicie o servidor do Front-End (npm run dev).
+
+Conecte o WhatsApp escaneando o QR Code na interface web.

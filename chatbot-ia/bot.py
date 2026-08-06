@@ -17,8 +17,8 @@ MODELO_PRINCIPAL = os.getenv("MODELO_PRINCIPAL", "gemini-3-flash-preview")
 MODELO_FALLBACK = os.getenv("MODELO_FALLBACK", "gemini-2.0-flash")
 
 # Configurações da Evolution API
-EVOLUTION_API_URL = os.getenv("EVOLUTION_API_URL", "http://evolution-api:8080")
-EVOLUTION_API_KEY = os.getenv("EVOLUTION_API_KEY", "SUA_CHAVE_API_AQUI")
+EVOLUTION_API_URL = os.getenv("EVOLUTION_API_URL")
+EVOLUTION_API_KEY = os.getenv("EVOLUTION_API_KEY")
 
 # ID fixo ou vindo do ambiente para a instância do container
 EMPRESA_ID = int(os.getenv("EMPRESA_ID", "1"))

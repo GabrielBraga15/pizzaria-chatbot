@@ -73,7 +73,7 @@ services:
       - CACHE_REDIS_TTL=604800
       
       # Chave de API da Evolution
-      - AUTHENTICATION_API_KEY=sua_api_key_aqui
+      - AUTHENTICATION_API_KEY=acesso123
     depends_on:
       postgres_db:
         condition: service_healthy
